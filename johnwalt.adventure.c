@@ -15,9 +15,9 @@ typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/
 
 struct room
 {
-    char name[10];
-    char connections[7][10];
-    char type[7];
+    char name[12];
+    char type[12];
+    char connections[6][12];
 };
 
 struct room rooms[7];
@@ -103,14 +103,25 @@ char** GetRoomNames(char *dirName)
 void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
 {
     int i = -7;
+    int j = -8;
     int file_descriptor;
     char filePath[48];
     char readBuffer[256];
     size_t nread;
-
+    const char newline[3] = "\n";
+    const char colonSpace[3] = ":";
+    char *tempString;
+    char tempArray[8][24];
+    char splitArray[8][10];
+    int midRoom = 0;
 
     for (i = 0; i < 7; i++)
     {
+        for (j = 0; j < 8; j++)
+        {
+            memset(tempArray[j], '\0', sizeof(tempArray[j]));
+            memset(splitArray[j], '\0', sizeof(splitArray[j]));
+        }
         file_descriptor = -1;
         memset(filePath, '\0', sizeof(filePath));
         strcpy(filePath, dirName);
@@ -128,7 +139,56 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
         memset(readBuffer, '\0', sizeof(readBuffer));
         nread = read(file_descriptor, readBuffer, sizeof(readBuffer));
 
-        printf("File %d contents: \n%s\n", i, readBuffer);
+        tempString = strtok(readBuffer, newline);
+        int k = 0;
+        strcpy(tempArray[k], tempString);
+
+        while (tempString != NULL)
+        {
+            strcpy(tempArray[k], tempString);
+            tempString = strtok(NULL, newline);
+            k++;
+        }
+
+        for (j = 0; j < k; j++)
+        {
+            strtok(tempArray[j], colonSpace);
+            tempString = strtok(NULL, colonSpace);
+            sscanf(tempString, "%s", splitArray[j]);
+        }
+
+        int roomsIndex = 0;
+        if (strcmp(splitArray[k - 1], "START_ROOM") == 0)
+        {
+            roomsIndex = 0;
+        }
+        else if (strcmp(splitArray[k - 1], "MID_ROOM") == 0)
+        {
+            midRoom++;
+            roomsIndex = midRoom;
+        }
+        else if (strcmp(splitArray[k - 1], "END_ROOM") == 0)
+        {
+            roomsIndex = 6;
+        }
+        else
+        {
+            printf("Something, somewhere, went just a little bit wrong.");
+        }
+
+        for (j = 0; j < 7; j++)
+        {
+            if (j < k - 1)
+            {
+                strcpy(rooms[roomsIndex].connections[j - 1], splitArray[j]);
+            }
+            else
+            {
+                strcpy(rooms[roomsIndex].connections[j - 1], "NoConn");
+            }
+        }
+        strcpy(rooms[roomsIndex].name, splitArray[0]);
+        strcpy(rooms[roomsIndex].type, splitArray[k - 1]);
     }
 }
 
@@ -171,6 +231,7 @@ int IsEndRoom()
 int main()
 {
     int i = -7;
+    int j = -6;
     char *dirName = GetRoomsDirectory();
     printf("dirName: %s\n", dirName);
 
@@ -181,6 +242,20 @@ int main()
     }
 
     FillArrayOfRoomStructs(dirName, roomsArray);
+
+    for (i = 0; i < 7; i++)
+    {
+        printf("rooms[%d].name: %s\n", i, rooms[i].name);
+        printf("rooms[%d].type: %s\n", i, rooms[i].type);
+        for (j = 0; j < 6; j++)
+        {
+            if (strcmp(rooms[i].connections[j], "NoConn") != 0)
+            {
+                printf("rooms[%d].connections[%d]: %s\n", i, j, rooms[i].connections[j]);
+            }
+        }
+        printf("\n");
+    }
 
 
     return 0;
