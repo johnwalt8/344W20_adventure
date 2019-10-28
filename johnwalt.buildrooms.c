@@ -15,7 +15,7 @@ typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/
 void FillRoomNameArray(char namesArray[10][10])
 {
     strcpy(namesArray[0], "Asimov");
-    strcpy(namesArray[1], "Heinline");
+    strcpy(namesArray[1], "Heinlein");
     strcpy(namesArray[2], "Harrison");
     strcpy(namesArray[3], "Brin");
     strcpy(namesArray[4], "LeGuin");
