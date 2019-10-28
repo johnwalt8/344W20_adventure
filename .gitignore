@@ -1,0 +1,10 @@
+# ignore compile files
+######################
+
+johnwalt.adventure
+johnwalt.buildrooms
+
+# ignore created room files
+###########################
+
+johnwalt.rooms.*
