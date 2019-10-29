@@ -246,6 +246,8 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char 
         
         nwritten = write(file_descriptor, lineOfText, strlen(lineOfText) * sizeof(char));
     }
+
+    close(file_descriptor);
 }
 
 int main()

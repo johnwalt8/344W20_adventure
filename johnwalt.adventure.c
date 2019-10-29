@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <time.h>
 
 typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/1921539/using-boolean-values-in-c
 
@@ -214,8 +215,8 @@ void GetAndPrintConnections(int currentLocation)
     }
 }
 
-// prints "WHERE TO? >" and returns user input
-char * SolicitUser()
+// takes pointer to a char, prints "WHERE TO? >" and gives user input to pointer
+void SolicitUser(char* userInput)
 {
 	int numCharsEntered = -5;
 	size_t bufferSize = 0;
@@ -224,7 +225,6 @@ char * SolicitUser()
     printf("WHERE TO? >");
     numCharsEntered = getline(&lineEntered, &bufferSize, stdin);
 
-    char *userInput = (char *) malloc(sizeof(char) * 128);
     if (strcmp(lineEntered, "\n") == 0)
     {
         strcpy(userInput, "bad user");
@@ -235,9 +235,6 @@ char * SolicitUser()
     }
 
     free(lineEntered);
-    lineEntered = NULL;
-
-    return userInput;
 }
 
 // returns true if user input is the name of a room that is connected to the current room
@@ -247,11 +244,11 @@ bool IsValidConnection(int currentLocation, char* userInput)
     int i = -6;
     for (i = 0; i < 6; i++)
     {
-        if(strcmp(rooms[currentLocation].connections[i], "NoConn") == 0)
+        if (strcmp(rooms[currentLocation].connections[i], "NoConn") == 0)
         {
             break;
         }
-        if(strcmp(rooms[currentLocation].connections[i], userInput) == 0)
+        if (strcmp(rooms[currentLocation].connections[i], userInput) == 0)
         {
             isValidConnection = true;
         }
@@ -259,6 +256,65 @@ bool IsValidConnection(int currentLocation, char* userInput)
     return isValidConnection;
 }
 
+// returns true if user input is the time command
+bool IsTimeCommand(char* userInput)
+{
+    bool isTimeCommand = false;
+    if (strcmp(userInput, "time") == 0)
+    {
+        isTimeCommand = true;
+    }
+    return isTimeCommand;
+}
+
+// returns properly formatted string of current time: " 1:03pm, Tuesday, September 13, 2016"
+    // learned about time and strftime() here: https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm
+void GetFormattedTimeString(char* currTime)
+{
+    time_t rawtime;
+    struct tm *info;
+
+    time( &rawtime );
+
+    info = localtime( &rawtime );
+
+    strftime(currTime, 40, "%l:%M%P, %A, %B %d, %Y\n", info);
+}
+
+// Creates time file and writes current time to file
+void CreateAndWriteTimeFile()
+{
+    char *filePath = "./currentTime.txt";
+    int file_descriptor = open(filePath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (file_descriptor == -1) // if file is not created
+    {
+        printf("open() failed on \"%s\"\n", filePath);
+    }
+
+    char *currTime = (char *) malloc(sizeof(char) * 40);
+    GetFormattedTimeString(currTime);
+
+    size_t nwritten = write(file_descriptor, currTime, strlen(currTime) * sizeof(char));
+
+    close(file_descriptor);
+    free(currTime);
+}
+
+// takes pointer to char array, reads time file and gives time string to pointer
+void ReadTimeFile(char* currTime)
+{
+    char readBuffer[42];
+    memset(readBuffer, '\0', sizeof(readBuffer));
+
+    char *filePath = "./currentTime.txt";
+    FILE *file_pointer = fopen(filePath, "r");
+
+    size_t numRead = fread(currTime, 40, 1, file_pointer);
+    
+    fclose(file_pointer);
+}
+
+// takes validated user input and returns index of current location
 int FindNextCurrentLocation(char* userInput)
 {
     int currentLocation = -1;
@@ -275,7 +331,7 @@ int FindNextCurrentLocation(char* userInput)
 }
 
 // prints "HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN." if user input is not valid
-void RoomNotValid(int currentLocation)
+void RoomNotValid()
 {
     printf("\nHUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
 }
@@ -303,27 +359,42 @@ int main()
     FillArrayOfRoomStructs(dirName, roomsArray);
 
     int currentLocation = 0;
+    char *userInput = (char *) malloc(sizeof(char) * 128);
     bool isEndRoom = false;
     int steps = 0;
     int roomIndexes[64];
 
     while (isEndRoom == false)
     {
+        bool isTimeCommand = false;
         PrintCurrentLocation(currentLocation);
         GetAndPrintConnections(currentLocation);
-        char* userInput = SolicitUser();
-        bool isValidConnection = IsValidConnection(currentLocation, userInput);
-        if (isValidConnection == true)
+        do // repeats just this part of loop if user calls time
         {
-            currentLocation = FindNextCurrentLocation(userInput);
-            roomIndexes[steps] = currentLocation;
-            steps++;
-        }
-        else
-        {
-            RoomNotValid(currentLocation);
-        }
-        isEndRoom = IsEndRoom(currentLocation);
+            isTimeCommand = false;
+            SolicitUser(userInput);
+            bool isValidConnection = IsValidConnection(currentLocation, userInput);
+            if (isValidConnection == true)
+            {
+                currentLocation = FindNextCurrentLocation(userInput);
+                roomIndexes[steps] = currentLocation;
+                steps++;
+            }
+            else if (IsTimeCommand(userInput) == true)
+            {
+                CreateAndWriteTimeFile();
+                char *currTime = (char *) malloc(sizeof(char) * 40);
+                ReadTimeFile(currTime);
+                printf("\n%s\n", currTime);
+                isTimeCommand = true;
+                free(currTime);
+            }
+            else
+            {
+                RoomNotValid();
+            }
+            isEndRoom = IsEndRoom(currentLocation);
+        } while (isTimeCommand == true);
     }
 
     printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
@@ -340,6 +411,7 @@ int main()
 
     free(dirName);
     free(roomsArray);
+    free(userInput);
 
     return 0;
 }

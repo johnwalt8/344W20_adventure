@@ -1,10 +1,11 @@
-# ignore compile files
+# ignore compiled files
 ######################
 
 johnwalt.adventure
 johnwalt.buildrooms
 
-# ignore created room files
+# ignore game created files
 ###########################
 
 johnwalt.rooms.*
+currentTime.txt
