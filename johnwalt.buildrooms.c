@@ -27,8 +27,7 @@ void FillRoomNameArray(char namesArray[10][10])
 }
 
 // takes array of seven ints representing rooms 1 through 7, assigns name to each
-    // room 0 will be start, room 4 will be end, names randomly assigned to these positions
-void ChooseRoomNameAndType(int roomsArray[7])
+void ChooseRoomName(int roomsArray[7])
 {
     int i = -7;
     int j = -7;
@@ -54,6 +53,23 @@ void ChooseRoomNameAndType(int roomsArray[7])
         }
     }
 
+}
+
+// takes array of seven MID rooms and assigns one room as START and one as END
+void ChooseRoomType(char typeArray[7][5])
+{
+    int i = -7;
+    for (i = 0; i < 7; i++)
+    {
+        strcpy(typeArray[i], "MID");
+    }
+    int r = rand()%7; 
+    strcpy(typeArray[r], "SRT"); // assign one member to represent start room
+    do
+    {
+        r = rand()%7;
+    } while (strcmp(typeArray[r], "SRT") == 0); // do not overwrite start room
+    strcpy(typeArray[r], "END"); // assign one array member to represent end room
 }
 
 // Returns true if all rooms have 3 to 6 outbound connections, false otherwise
@@ -152,8 +168,8 @@ void AddRandomConnection(int connectionsArray[7][7])
     ConnectRoom(roomB, roomA, connectionsArray); // make the reverse connection while we have needed info
 }
 
-// uses array of rooms, names, and connections to create room files
-void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], int connectionsArray[7][7])
+// uses array of rooms, names, types, and connections to create room files
+void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char typeArray[7][5], int connectionsArray[7][7])
 {
     char dirName[25]; // name of directory, will include process id number suffix
     char pidStr[10]; // process id number as a string
@@ -212,23 +228,22 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], int c
             }
         }
 
+
         memset(lineOfText, '\0', sizeof(lineOfText)); // empty string variable
         strcpy(lineOfText, "ROOM_TYPE: ");
-        switch (i)
+        if (strcmp(typeArray[i], "SRT") == 0)
         {
-            case 0:
-                strcat(lineOfText, "START_ROOM\n");
-                break;
-            case 1: case 2: case 3: case 5: case 6:
-                strcat(lineOfText, "MID_ROOM\n");
-                break;
-            case 4: // list of possible connections appears more random of end is not 6
-                strcat(lineOfText, "END_ROOM\n");
-                break;
-            default:
-                printf("Something, somewhere, went just a little bit wrong.");
-                break;
+            strcat(lineOfText, "START_ROOM\n");
         }
+        else if (strcmp(typeArray[i], "END") == 0)
+        {
+            strcat(lineOfText, "END_ROOM\n");
+        }
+        else
+        {
+            strcat(lineOfText, "MID_ROOM\n");
+        }
+        
         nwritten = write(file_descriptor, lineOfText, strlen(lineOfText) * sizeof(char));
     }
 }
@@ -243,9 +258,16 @@ int main()
 
     int roomArray[7] = { 7, 7, 7, 7, 7, 7, 7 }; // Room names will be randomly assigned to 0 through 6
                                                 // 0 will be start, 6 will be end
-    ChooseRoomNameAndType(roomArray);
+    ChooseRoomName(roomArray);
 
     int i = -7;
+    char typeArray[7][5]; // array of identifying strings to assign room type
+    for (i = 0; i < 7; i++)
+    {
+        memset(typeArray[i], '\0', sizeof(typeArray[i]));
+    }
+    ChooseRoomType(typeArray);
+
     int j = -7;
     int connectionsArray[7][7]; // Array of connections between rooms, each room (0 - 6) will have 7 possible connections (one of which, connection to self, will never be used), assigned randomly
     for (i = 0; i < 7; i++)
@@ -261,7 +283,7 @@ int main()
         AddRandomConnection(connectionsArray);
     }
 
-    CreateAndPrintRoomFiles(roomNameArray, roomArray, connectionsArray);
+    CreateAndPrintRoomFiles(roomNameArray, roomArray, typeArray, connectionsArray);
 
     return 0;
 }
