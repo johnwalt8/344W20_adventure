@@ -2,14 +2,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-// #include <time.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
-// #include <sys/types.h>
-// #include <errno.h>
 
 typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/1921539/using-boolean-values-in-c
 
@@ -193,70 +190,156 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
 }
 
 // prints current location to stdout
-void PrintCurrentLocation(char currentLocation[10])
+void PrintCurrentLocation(int currentLocation)
 {
-
+    printf("\nCURRENT LOCATION: %s\n", rooms[currentLocation].name);
 }
 
 // gets from file and prints possible connections
-void GetAndPrintConnections()
+void GetAndPrintConnections(int currentLocation)
 {
-
+    int i = -6;
+    printf("POSSIBLE CONNECTIONS: ");
+    for (i = 0; i < 6; i++)
+    {
+        if ((strcmp(rooms[currentLocation].connections[i + 1], "NoConn") != 0) && (i < 5))
+        {
+            printf("%s, ", rooms[currentLocation].connections[i]);
+        }
+        else if (strcmp(rooms[currentLocation].connections[i], "NoConn") != 0)
+        {
+            printf("%s.\n", rooms[currentLocation].connections[i]);
+            break;
+        }
+    }
 }
 
-// prints "WHERE TO? >" and waits for user input
-void SolicitUser()
+// prints "WHERE TO? >" and returns user input
+char * SolicitUser()
 {
+	int numCharsEntered = -5;
+	size_t bufferSize = 0;
+	char* lineEntered = NULL;
 
+    printf("WHERE TO? >");
+    numCharsEntered = getline(&lineEntered, &bufferSize, stdin);
+
+    char *userInput = (char *) malloc(sizeof(char) * 128);
+    if (strcmp(lineEntered, "\n") == 0)
+    {
+        strcpy(userInput, "bad user");
+    }
+    else
+    {
+        strcpy(userInput, strtok(lineEntered, "\n"));
+    }
+
+    free(lineEntered);
+    lineEntered = NULL;
+
+    return userInput;
 }
 
-// returns true if user input is the name of a room
-int IsValidRoom()
+// returns true if user input is the name of a room that is connected to the current room
+bool IsValidConnection(int currentLocation, char* userInput)
 {
-    
+    bool isValidConnection = false;
+    int i = -6;
+    for (i = 0; i < 6; i++)
+    {
+        if(strcmp(rooms[currentLocation].connections[i], "NoConn") == 0)
+        {
+            break;
+        }
+        if(strcmp(rooms[currentLocation].connections[i], userInput) == 0)
+        {
+            isValidConnection = true;
+        }
+    }
+    return isValidConnection;
+}
+
+int FindNextCurrentLocation(char* userInput)
+{
+    int currentLocation = -1;
+    int i = -7;
+    for (i = 0; i < 7; i++)
+    {
+        if (strcmp(rooms[i].name, userInput) == 0)
+        {
+            currentLocation = i;
+            break;
+        }
+    }
+    return currentLocation;
 }
 
 // prints "HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN." if user input is not valid
-void RoomNotValid()
+void RoomNotValid(int currentLocation)
 {
-
+    printf("\nHUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
 }
 
 // returns true if room is end room
-int IsEndRoom()
+bool IsEndRoom(int currentLocation)
 {
-
+    bool isEndRoom = false;
+    if (currentLocation == 6)
+    {
+        isEndRoom = true;
+    }
+    return isEndRoom;
 }
 
 int main()
 {
     int i = -7;
     int j = -6;
+
     char *dirName = GetRoomsDirectory();
-    printf("dirName: %s\n", dirName);
 
     char **roomsArray = GetRoomNames(dirName);
-    for (i = 0; i < 7; i++)
-    {
-        printf("Room %d: %s\n", i, roomsArray[i]);
-    }
 
     FillArrayOfRoomStructs(dirName, roomsArray);
 
-    for (i = 0; i < 7; i++)
+    int currentLocation = 0;
+    bool isEndRoom = false;
+    int steps = 0;
+    int roomIndexes[64];
+
+    while (isEndRoom == false)
     {
-        printf("rooms[%d].name: %s\n", i, rooms[i].name);
-        printf("rooms[%d].type: %s\n", i, rooms[i].type);
-        for (j = 0; j < 6; j++)
+        PrintCurrentLocation(currentLocation);
+        GetAndPrintConnections(currentLocation);
+        char* userInput = SolicitUser();
+        bool isValidConnection = IsValidConnection(currentLocation, userInput);
+        if (isValidConnection == true)
         {
-            if (strcmp(rooms[i].connections[j], "NoConn") != 0)
-            {
-                printf("rooms[%d].connections[%d]: %s\n", i, j, rooms[i].connections[j]);
-            }
+            currentLocation = FindNextCurrentLocation(userInput);
+            roomIndexes[steps] = currentLocation;
+            steps++;
         }
-        printf("\n");
+        else
+        {
+            RoomNotValid(currentLocation);
+        }
+        isEndRoom = IsEndRoom(currentLocation);
     }
 
+    printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+    char S[] = "S";
+    if (steps == 1)
+    {
+        strcpy(S, "");
+    }
+    printf("YOU TOOK %d STEP%s. YOUR PATH TO VICTORY WAS:\n", steps, S);
+    for (i = 0; i < steps; i++)
+    {
+        printf("%s\n", rooms[roomIndexes[i]].name);
+    }
+
+    free(dirName);
+    free(roomsArray);
 
     return 0;
 }

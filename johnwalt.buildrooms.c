@@ -27,7 +27,7 @@ void FillRoomNameArray(char namesArray[10][10])
 }
 
 // takes array of seven ints representing rooms 1 through 7, assigns name to each
-    // room 0 will be start, room 6 will be end, names randomly assigned to these positions
+    // room 0 will be start, room 4 will be end, names randomly assigned to these positions
 void ChooseRoomNameAndType(int roomsArray[7])
 {
     int i = -7;
@@ -39,9 +39,8 @@ void ChooseRoomNameAndType(int roomsArray[7])
         while(roomsArray[i] == 7)
         {
             bool already = false; // name not already used
-            r = rand();
-            r = r%10; // random integer 0 through 9
-            for ( j = 0; j < i; j++) // check all names
+            r = rand()%10; // random integer 0 through 9
+            for ( j = 0; j < i; j++) // check all names saved so far
             {
                 if (r == roomsArray[j])
                 {
@@ -220,10 +219,10 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], int c
             case 0:
                 strcat(lineOfText, "START_ROOM\n");
                 break;
-            case 1: case 2: case 3: case 4: case 5:
+            case 1: case 2: case 3: case 5: case 6:
                 strcat(lineOfText, "MID_ROOM\n");
                 break;
-            case 6:
+            case 4: // list of possible connections appears more random of end is not 6
                 strcat(lineOfText, "END_ROOM\n");
                 break;
             default:
