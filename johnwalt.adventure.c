@@ -8,6 +8,9 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <time.h>
+#include <pthread.h>
+
+pthread_mutex_t gameMutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/1921539/using-boolean-values-in-c
 
@@ -282,8 +285,10 @@ void GetFormattedTimeString(char* currTime)
 }
 
 // Creates time file and writes current time to file
-void CreateAndWriteTimeFile()
+void* CreateAndWriteTimeFile(void* argument)
 {
+    pthread_mutex_lock( &gameMutex );
+
     char *filePath = "./currentTime.txt";
     int file_descriptor = open(filePath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (file_descriptor == -1) // if file is not created
@@ -298,6 +303,7 @@ void CreateAndWriteTimeFile()
 
     close(file_descriptor);
     free(currTime);
+    pthread_mutex_unlock( &gameMutex );
 }
 
 // takes pointer to char array, reads time file and gives time string to pointer
@@ -310,7 +316,7 @@ void ReadTimeFile(char* currTime)
     FILE *file_pointer = fopen(filePath, "r");
 
     size_t numRead = fread(currTime, 40, 1, file_pointer);
-    
+
     fclose(file_pointer);
 }
 
@@ -349,6 +355,11 @@ bool IsEndRoom(int currentLocation)
 
 int main()
 {
+    pthread_t timeThread;
+    pthread_mutex_lock( &gameMutex );
+
+    int result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
+
     int i = -7;
     int j = -6;
 
@@ -382,7 +393,12 @@ int main()
             }
             else if (IsTimeCommand(userInput) == true)
             {
-                CreateAndWriteTimeFile();
+                pthread_mutex_unlock( &gameMutex );
+                result = pthread_join(timeThread, NULL);
+                    // CreateAndWriteTimeFile();
+                pthread_mutex_lock( &gameMutex );
+                result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
+
                 char *currTime = (char *) malloc(sizeof(char) * 40);
                 ReadTimeFile(currTime);
                 printf("\n%s\n", currTime);
