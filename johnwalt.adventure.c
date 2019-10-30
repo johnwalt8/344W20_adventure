@@ -14,18 +14,18 @@ pthread_mutex_t gameMutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/1921539/using-boolean-values-in-c
 
-struct room
+struct room // struct used in global array of rooms
 {
     char name[12];
     char type[12];
     char connections[6][12];
 };
 
-struct room rooms[7];
+struct room rooms[7]; // global array of room structs
 
 // returns name of most recent rooms directory
     // from reading 2.4 Manipulating Directories
-char * GetRoomsDirectory()
+char* GetRoomsDirectory()
 {
     int newestDirTime = -1;
     char targetDirPrefix[32] = "johnwalt.rooms.";
@@ -37,7 +37,7 @@ char * GetRoomsDirectory()
     struct dirent *fileInDir; 
     struct stat dirAttributes;
 
-    dirToCheck = opendir(".");
+    dirToCheck = opendir("."); // current directory
 
     if (dirToCheck > 0)
     {
@@ -47,7 +47,7 @@ char * GetRoomsDirectory()
             {
                 stat(fileInDir->d_name, &dirAttributes);
 
-                if ((int)dirAttributes.st_mtime > newestDirTime)
+                if ((int)dirAttributes.st_mtime > newestDirTime) // if latest directory checked is newest yet
                 {
                     newestDirTime = (int)dirAttributes.st_mtime;
                     memset(newestDirName, '\0', sizeof(newestDirName));
@@ -60,16 +60,16 @@ char * GetRoomsDirectory()
     closedir(dirToCheck);
 
     strcpy(dirName, "./");
-    strcat(dirName, newestDirName);
+    strcat(dirName, newestDirName); // gives us: "./johnwalt.room.<PID>"
 
     return dirName;
 }
 
-// returns an array of names of seven rooms
+// takes name of directory returns an array of names of seven rooms
 char** GetRoomNames(char *dirName)
 {
     int i = -7;
-    char **roomsArray = (char**) malloc(sizeof(char*) * 7);
+    char **roomsArray = (char**) malloc(sizeof(char*) * 7); // to be returned
     for (i = 0; i < 7; i++)
     {
         roomsArray[i] = (char*) malloc(sizeof(char) * 16);
@@ -87,7 +87,7 @@ char** GetRoomNames(char *dirName)
     {
         while ((fileInDir = readdir(roomDir)) != NULL)
         {
-            if (fileInDir->d_type == DT_REG && i < 7)
+            if (fileInDir->d_type == DT_REG && i < 7) // regular files only, assumes only seven
             {
                 strcpy(roomsArray[i], strtok(fileInDir->d_name, "_"));
                 i++;
@@ -106,21 +106,21 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
     int i = -7;
     int j = -8;
     int file_descriptor;
-    char filePath[48];
-    char readBuffer[256];
+    char filePath[48]; // path to each room file
+    char readBuffer[256]; // temp storage for contents of each room file
     size_t nread;
-    const char newline[3] = "\n";
-    const char colonSpace[3] = ":";
+    const char newline[3] = "\n"; // delimiter for strtok()
+    const char colon[3] = ":"; // delimiter for strtok()
     char *tempString;
-    char tempArray[8][24];
-    char splitArray[8][10];
+    char tempArray[8][24]; // array of lines from room files
+    char splitArray[8][10]; // array of needed text from room files
     int midRoom = 0;
 
-    for (i = 0; i < 7; i++)
+    for (i = 0; i < 7; i++) // iterate through roomsArray
     {
         for (j = 0; j < 8; j++)
         {
-            memset(tempArray[j], '\0', sizeof(tempArray[j]));
+            memset(tempArray[j], '\0', sizeof(tempArray[j])); 
             memset(splitArray[j], '\0', sizeof(splitArray[j]));
         }
         file_descriptor = -1;
@@ -128,7 +128,7 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
         strcpy(filePath, dirName);
         strcat(filePath, "/");
         strcat(filePath, roomsArray[i]);
-        strcat(filePath, "_room");
+        strcat(filePath, "_room"); // filePath to each of the room files
 
         file_descriptor = open(filePath, O_RDONLY);
 
@@ -140,44 +140,44 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
         memset(readBuffer, '\0', sizeof(readBuffer));
         nread = read(file_descriptor, readBuffer, sizeof(readBuffer));
 
-        tempString = strtok(readBuffer, newline);
-        int k = 0;
+        tempString = strtok(readBuffer, newline); // first line of room file
+        int k = 0;  // keeps track of number of lines in room file
         strcpy(tempArray[k], tempString);
 
         while (tempString != NULL)
         {
             strcpy(tempArray[k], tempString);
-            tempString = strtok(NULL, newline);
+            tempString = strtok(NULL, newline); // following lines of room file
             k++;
         }
 
-        for (j = 0; j < k; j++)
+        for (j = 0; j < k; j++) // iterate through array of room file lines
         {
-            strtok(tempArray[j], colonSpace);
-            tempString = strtok(NULL, colonSpace);
-            sscanf(tempString, "%s", splitArray[j]);
+            strtok(tempArray[j], colon);
+            tempString = strtok(NULL, colon);  // takes string after colon, but includes leading space
+            sscanf(tempString, "%s", splitArray[j]); // gets rid of leading space
         }
 
-        int roomsIndex = 0;
+        int roomsIndex = 0; 
         if (strcmp(splitArray[k - 1], "START_ROOM") == 0)
         {
-            roomsIndex = 0;
+            roomsIndex = 0; // places start room at index 0
         }
         else if (strcmp(splitArray[k - 1], "MID_ROOM") == 0)
         {
             midRoom++;
-            roomsIndex = midRoom;
+            roomsIndex = midRoom; // up to five mid rooms
         }
         else if (strcmp(splitArray[k - 1], "END_ROOM") == 0)
         {
-            roomsIndex = 6;
+            roomsIndex = 6; // places end room at index 6
         }
         else
         {
             printf("Something, somewhere, went just a little bit wrong.");
         }
 
-        for (j = 0; j < 7; j++)
+        for (j = 0; j < 7; j++) // iterate through array of room info: name, connections, type
         {
             if (j < k - 1)
             {
@@ -185,7 +185,7 @@ void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
             }
             else
             {
-                strcpy(rooms[roomsIndex].connections[j - 1], "NoConn");
+                strcpy(rooms[roomsIndex].connections[j - 1], "NoConn"); // extra members of connections array
             }
         }
         strcpy(rooms[roomsIndex].name, splitArray[0]);
@@ -208,11 +208,11 @@ void GetAndPrintConnections(int currentLocation)
     {
         if ((strcmp(rooms[currentLocation].connections[i + 1], "NoConn") != 0) && (i < 5))
         {
-            printf("%s, ", rooms[currentLocation].connections[i]);
+            printf("%s, ", rooms[currentLocation].connections[i]); // name of connection followed by comma
         }
         else if (strcmp(rooms[currentLocation].connections[i], "NoConn") != 0)
         {
-            printf("%s.\n", rooms[currentLocation].connections[i]);
+            printf("%s.\n", rooms[currentLocation].connections[i]); // name of final connection followed by period
             break;
         }
     }
@@ -226,15 +226,15 @@ void SolicitUser(char* userInput)
 	char* lineEntered = NULL;
 
     printf("WHERE TO? >");
-    numCharsEntered = getline(&lineEntered, &bufferSize, stdin);
+    numCharsEntered = getline(&lineEntered, &bufferSize, stdin); // waits for input
 
-    if (strcmp(lineEntered, "\n") == 0)
+    if (strcmp(lineEntered, "\n") == 0) // in case the user pushes "enter" only
     {
         strcpy(userInput, "bad user");
     }
     else
     {
-        strcpy(userInput, strtok(lineEntered, "\n"));
+        strcpy(userInput, strtok(lineEntered, "\n")); // not including newline
     }
 
     free(lineEntered);
@@ -245,13 +245,13 @@ bool IsValidConnection(int currentLocation, char* userInput)
 {
     bool isValidConnection = false;
     int i = -6;
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < 6; i++) // interate through connection names
     {
-        if (strcmp(rooms[currentLocation].connections[i], "NoConn") == 0)
+        if (strcmp(rooms[currentLocation].connections[i], "NoConn") == 0) // no more connections
         {
             break;
         }
-        if (strcmp(rooms[currentLocation].connections[i], userInput) == 0)
+        if (strcmp(rooms[currentLocation].connections[i], userInput) == 0) // user input matches
         {
             isValidConnection = true;
         }
@@ -275,13 +275,13 @@ bool IsTimeCommand(char* userInput)
 void GetFormattedTimeString(char* currTime)
 {
     time_t rawtime;
-    struct tm *info;
+    struct tm *localTime;
 
     time( &rawtime );
 
-    info = localtime( &rawtime );
+    localTime = localtime( &rawtime );
 
-    strftime(currTime, 40, "%l:%M%P, %A, %B %d, %Y\n", info);
+    strftime(currTime, 40, "%l:%M%P, %A, %B %d, %Y\n", localTime); // %l gives two digits or space and single digit
 }
 
 // Creates time file and writes current time to file
@@ -297,7 +297,7 @@ void* CreateAndWriteTimeFile(void* argument)
     }
 
     char *currTime = (char *) malloc(sizeof(char) * 40);
-    GetFormattedTimeString(currTime);
+    GetFormattedTimeString(currTime); // modifies currTime
 
     size_t nwritten = write(file_descriptor, currTime, strlen(currTime) * sizeof(char));
 
@@ -315,21 +315,21 @@ void ReadTimeFile(char* currTime)
     char *filePath = "./currentTime.txt";
     FILE *file_pointer = fopen(filePath, "r");
 
-    size_t numRead = fread(currTime, 40, 1, file_pointer);
+    size_t numRead = fread(currTime, 40, 1, file_pointer); // read() stymied by commas
 
     fclose(file_pointer);
 }
 
-// takes validated user input and returns index of current location
+// takes validated user input and returns index of next current location
 int FindNextCurrentLocation(char* userInput)
 {
     int currentLocation = -1;
     int i = -7;
-    for (i = 0; i < 7; i++)
+    for (i = 0; i < 7; i++) // iterates through names to find match
     {
         if (strcmp(rooms[i].name, userInput) == 0)
         {
-            currentLocation = i;
+            currentLocation = i; // we want index of matching name
             break;
         }
     }
@@ -356,8 +356,9 @@ bool IsEndRoom(int currentLocation)
 int main()
 {
     pthread_t timeThread;
-    pthread_mutex_lock( &gameMutex );
+    pthread_mutex_lock( &gameMutex ); // lock out soom to be created second thread
 
+    // second thread ready to write formatted time to "currentTime.txt"
     int result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
 
     int i = -7;
@@ -367,13 +368,13 @@ int main()
 
     char **roomsArray = GetRoomNames(dirName);
 
-    FillArrayOfRoomStructs(dirName, roomsArray);
+    FillArrayOfRoomStructs(dirName, roomsArray); // all the info needed for game
 
     int currentLocation = 0;
     char *userInput = (char *) malloc(sizeof(char) * 128);
     bool isEndRoom = false;
-    int steps = 0;
-    int roomIndexes[64];
+    int steps = 0;       // counts steps
+    int roomIndexes[64]; // saves indexes of rooms used enroute to end
 
     while (isEndRoom == false)
     {
@@ -385,7 +386,7 @@ int main()
             isTimeCommand = false;
             SolicitUser(userInput);
             bool isValidConnection = IsValidConnection(currentLocation, userInput);
-            if (isValidConnection == true)
+            if (isValidConnection == true) // move to next room
             {
                 currentLocation = FindNextCurrentLocation(userInput);
                 roomIndexes[steps] = currentLocation;
@@ -393,11 +394,11 @@ int main()
             }
             else if (IsTimeCommand(userInput) == true)
             {
-                pthread_mutex_unlock( &gameMutex );
+                pthread_mutex_unlock( &gameMutex ); // let the second thread activate
                 result = pthread_join(timeThread, NULL);
-                    // CreateAndWriteTimeFile();
+                    // CreateAndWriteTimeFile(); runs as separate thread now
                 pthread_mutex_lock( &gameMutex );
-                result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
+                result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL ); // recreate second thread
 
                 char *currTime = (char *) malloc(sizeof(char) * 40);
                 ReadTimeFile(currTime);
