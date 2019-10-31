@@ -23,14 +23,13 @@ struct room // struct used in global array of rooms
 
 struct room rooms[7]; // global array of room structs
 
-// returns name of most recent rooms directory
+// takes pointer to char array, fills with name of most recent rooms directory
     // from reading 2.4 Manipulating Directories
-char* GetRoomsDirectory()
+void GetRoomsDirectory(char* dirName)
 {
     int newestDirTime = -1;
     char targetDirPrefix[32] = "johnwalt.rooms.";
     char newestDirName[32];
-    char *dirName = (char *) malloc(sizeof(char) * 32);
     memset(newestDirName, '\0', sizeof(newestDirName));
 
     DIR* dirToCheck;
@@ -61,25 +60,12 @@ char* GetRoomsDirectory()
 
     strcpy(dirName, "./");
     strcat(dirName, newestDirName); // gives us: "./johnwalt.room.<PID>"
-
-    return dirName;
 }
 
-// takes name of directory returns an array of names of seven rooms
-char** GetRoomNames(char *dirName)
+// takes pointer to name of directory and pointer to 2D char array, fills 2D array with names of seven rooms
+void GetRoomNames(char* dirName, char** roomsArray)
 {
-    int i = -7;
-    char **roomsArray = (char**) malloc(sizeof(char*) * 7); // to be returned
-    for (i = 0; i < 7; i++)
-    {
-        roomsArray[i] = (char*) malloc(sizeof(char) * 16);
-    }
-    for (i = 0; i < 7; i++)
-    {
-        memset(roomsArray[i], '\0', sizeof(char) * 16);
-    }
-
-    i = 0;
+    int i = 0;
     DIR* roomDir;
     struct dirent *fileInDir;
     roomDir = opendir(dirName);
@@ -96,12 +82,10 @@ char** GetRoomNames(char *dirName)
     }
     
     closedir(roomDir);
-
-    return roomsArray;
 }
 
-// gets room info from room files and fills array of room structs called rooms
-void FillArrayOfRoomStructs(char dirName[32], char** roomsArray)
+// takes name of room directory and array of room names, fills array of room structs called rooms
+void FillArrayOfRoomStructs(char* dirName, char** roomsArray)
 {
     int i = -7;
     int j = -8;
@@ -296,7 +280,8 @@ void* CreateAndWriteTimeFile(void* argument)
         printf("open() failed on \"%s\"\n", filePath);
     }
 
-    char *currTime = (char *) malloc(sizeof(char) * 40);
+    char *currTime = (char *) malloc(sizeof(char) * 42);
+    memset(currTime, '\0', sizeof(char) * 42);
     GetFormattedTimeString(currTime); // modifies currTime
 
     size_t nwritten = write(file_descriptor, currTime, strlen(currTime) * sizeof(char));
@@ -309,9 +294,6 @@ void* CreateAndWriteTimeFile(void* argument)
 // takes pointer to char array, reads time file and gives time string to pointer
 void ReadTimeFile(char* currTime)
 {
-    char readBuffer[42];
-    memset(readBuffer, '\0', sizeof(readBuffer));
-
     char *filePath = "./currentTime.txt";
     FILE *file_pointer = fopen(filePath, "r");
 
@@ -364,14 +346,24 @@ int main()
     int i = -7;
     int j = -6;
 
-    char *dirName = GetRoomsDirectory();
+    char *dirName = (char *) malloc(sizeof(char) * 32); // name of directory of room files
+    memset(dirName, '\0', sizeof(char) * 32);
+    GetRoomsDirectory(dirName);
 
-    char **roomsArray = GetRoomNames(dirName);
+    char **roomsArray = (char**) malloc(sizeof(char*) * 7); // to be returned
+    for (i = 0; i < 7; i++)
+    {
+        roomsArray[i] = (char*) malloc(sizeof(char) * 16);
+        memset(roomsArray[i], '\0', sizeof(char) * 16);
+    }
+    GetRoomNames(dirName, roomsArray);
 
+    memset(rooms, '\0', sizeof(rooms));
     FillArrayOfRoomStructs(dirName, roomsArray); // all the info needed for game
 
     int currentLocation = 0;
     char *userInput = (char *) malloc(sizeof(char) * 128);
+    memset(userInput, '\0', sizeof(char) * 128);
     bool isEndRoom = false;
     int steps = 0;       // counts steps
     int roomIndexes[64]; // saves indexes of rooms used enroute to end
@@ -400,7 +392,8 @@ int main()
                 pthread_mutex_lock( &gameMutex );
                 result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL ); // recreate second thread
 
-                char *currTime = (char *) malloc(sizeof(char) * 40);
+                char *currTime = (char *) malloc(sizeof(char) * 42);
+                memset(currTime, '\0', sizeof(char) * 42);
                 ReadTimeFile(currTime);
                 printf("\n%s\n", currTime);
                 isTimeCommand = true;
@@ -427,6 +420,10 @@ int main()
     }
 
     free(dirName);
+    for (i = 0; i < 7; i++)
+    {
+        free(roomsArray[i]);
+    }
     free(roomsArray);
     free(userInput);
 
