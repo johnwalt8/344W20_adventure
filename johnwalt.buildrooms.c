@@ -1,5 +1,12 @@
 /* johnwalt.buildrooms.c */
 
+// Walter Johnson: johnwalt@oregonstate.edu
+// CS344 OPERATING SYSTEMS I
+// Winter 2020
+// Program 2
+
+// Based on code written by Walter for CS344 Fall 2019 with permission from Bram Lewis.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -23,7 +30,7 @@ int IsGraphFull(int connectionsArray[7][7]);
 int GetRandomRoom();
         // Returns a random Room, does NOT validate if connection can be added
 int CanAddConnectionFrom(int room, int connectionsArray[7][7]);
-        // Returns true if a connection can be added from Room x (< 6 outbound connections), false otherwise
+        // Returns true if a connection can be added from Room x (< 6 outbound connections)
 int ConnectionAlreadyExists(int roomX, int roomY, int connectionsArray[7][7]);
         // Returns true if a connection from Room x to Room y already exists, false otherwise
 void ConnectRoom(int roomX, int roomY, int connectionsArray[7][7]);

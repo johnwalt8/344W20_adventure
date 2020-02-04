@@ -1,5 +1,12 @@
 /* johnwalt.adventure.c */
 
+// Walter Johnson: johnwalt@oregonstate.edu
+// CS344 OPERATING SYSTEMS I
+// Winter 2020
+// Program 2
+
+// Based on code written by Walter for CS344 Fall 2019 with permission from Bram Lewis.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -22,6 +29,132 @@ struct room // struct used in global array of rooms
 };
 
 struct room rooms[7]; // global array of room structs
+
+/*--Function Prototypes---------------------------------------------------------------------------*/
+void GetRoomsDirectory(char* dirName);
+        // fills char array with name of most recent rooms directory
+void GetRoomNames(char* dirName, char** roomsArray);
+        // fills 2D array with names of seven rooms
+void FillArrayOfRoomStructs(char* dirName, char** roomsArray);
+        // fills array of room structs called rooms
+void PrintCurrentLocation(int currentLocation);
+        // prints current location to stdout
+void GetAndPrintConnections(int currentLocation);
+        // gets from file and prints possible connections
+void SolicitUser(char* userInput);
+        // prints "WHERE TO? >" and takes user input
+bool IsValidConnection(int currentLocation, char* userInput);
+        // returns true if user input is the name of a room that is connected to the current room
+bool IsTimeCommand(char* userInput);
+        // returns true if user input is the time command
+void GetFormattedTimeString(char* currTime);
+        // returns properly formatted string of current time: " 1:03pm, Tuesday, September 13, 2016"
+void* CreateAndWriteTimeFile(void* argument);
+        // Creates time file and writes current time to file
+void ReadTimeFile(char* currTime);
+        // reads time file and gives time string to pointer
+int FindNextCurrentLocation(char* userInput);
+        // takes validated user input and returns index of next current location
+void RoomNotValid();
+        // prints "HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN." if user input is not valid
+bool IsEndRoom(int currentLocation);
+        // returns true if room is end room
+/*---------------------------------------------------------------------------Function Prototypes--*/
+
+int main()
+{
+    pthread_t timeThread;
+    pthread_mutex_lock( &gameMutex ); // lock out soom to be created second thread
+
+    // second thread ready to write formatted time to "currentTime.txt"
+    int result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
+
+    int i = -7;
+    int j = -6;
+
+    char *dirName = (char *) malloc(sizeof(char) * 32); // name of directory of room files
+    memset(dirName, '\0', sizeof(char) * 32);
+    GetRoomsDirectory(dirName);
+
+    char **roomsArray = (char**) malloc(sizeof(char*) * 7); // to be returned
+    for (i = 0; i < 7; i++)
+    {
+        roomsArray[i] = (char*) malloc(sizeof(char) * 16);
+        memset(roomsArray[i], '\0', sizeof(char) * 16);
+    }
+    GetRoomNames(dirName, roomsArray);
+
+    memset(rooms, '\0', sizeof(rooms));
+    FillArrayOfRoomStructs(dirName, roomsArray); // all the info needed for game
+
+    int currentLocation = 0;
+    char *userInput = (char *) malloc(sizeof(char) * 128);
+    memset(userInput, '\0', sizeof(char) * 128);
+    bool isEndRoom = false;
+    int steps = 0;       // counts steps
+    int roomIndexes[64]; // saves indexes of rooms used enroute to end
+
+    while (isEndRoom == false)
+    {
+        bool isTimeCommand = false;
+        PrintCurrentLocation(currentLocation);
+        GetAndPrintConnections(currentLocation);
+        do // repeats just this part of loop if user calls time
+        {
+            isTimeCommand = false;
+            SolicitUser(userInput);
+            bool isValidConnection = IsValidConnection(currentLocation, userInput);
+            if (isValidConnection == true) // move to next room
+            {
+                currentLocation = FindNextCurrentLocation(userInput);
+                roomIndexes[steps] = currentLocation;
+                steps++;
+            }
+            else if (IsTimeCommand(userInput) == true)
+            {
+                pthread_mutex_unlock( &gameMutex ); // let the second thread activate
+                result = pthread_join(timeThread, NULL);
+                    // CreateAndWriteTimeFile(); runs as separate thread now
+                pthread_mutex_lock( &gameMutex );
+                result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL ); // recreate second thread
+
+                char *currTime = (char *) malloc(sizeof(char) * 42);
+                memset(currTime, '\0', sizeof(char) * 42);
+                ReadTimeFile(currTime);
+                printf("\n%s\n", currTime);
+                isTimeCommand = true;
+                free(currTime);
+            }
+            else
+            {
+                RoomNotValid();
+            }
+            isEndRoom = IsEndRoom(currentLocation);
+        } while (isTimeCommand == true);
+    }
+
+    printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+    char S[] = "S";
+    if (steps == 1)
+    {
+        strcpy(S, "");
+    }
+    printf("YOU TOOK %d STEP%s. YOUR PATH TO VICTORY WAS:\n", steps, S);
+    for (i = 0; i < steps; i++)
+    {
+        printf("%s\n", rooms[roomIndexes[i]].name);
+    }
+
+    free(dirName);
+    for (i = 0; i < 7; i++)
+    {
+        free(roomsArray[i]);
+    }
+    free(roomsArray);
+    free(userInput);
+
+    return 0;
+}
 
 // takes pointer to char array, fills with name of most recent rooms directory
     // from reading 2.4 Manipulating Directories
@@ -333,99 +466,4 @@ bool IsEndRoom(int currentLocation)
         isEndRoom = true;
     }
     return isEndRoom;
-}
-
-int main()
-{
-    pthread_t timeThread;
-    pthread_mutex_lock( &gameMutex ); // lock out soom to be created second thread
-
-    // second thread ready to write formatted time to "currentTime.txt"
-    int result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
-
-    int i = -7;
-    int j = -6;
-
-    char *dirName = (char *) malloc(sizeof(char) * 32); // name of directory of room files
-    memset(dirName, '\0', sizeof(char) * 32);
-    GetRoomsDirectory(dirName);
-
-    char **roomsArray = (char**) malloc(sizeof(char*) * 7); // to be returned
-    for (i = 0; i < 7; i++)
-    {
-        roomsArray[i] = (char*) malloc(sizeof(char) * 16);
-        memset(roomsArray[i], '\0', sizeof(char) * 16);
-    }
-    GetRoomNames(dirName, roomsArray);
-
-    memset(rooms, '\0', sizeof(rooms));
-    FillArrayOfRoomStructs(dirName, roomsArray); // all the info needed for game
-
-    int currentLocation = 0;
-    char *userInput = (char *) malloc(sizeof(char) * 128);
-    memset(userInput, '\0', sizeof(char) * 128);
-    bool isEndRoom = false;
-    int steps = 0;       // counts steps
-    int roomIndexes[64]; // saves indexes of rooms used enroute to end
-
-    while (isEndRoom == false)
-    {
-        bool isTimeCommand = false;
-        PrintCurrentLocation(currentLocation);
-        GetAndPrintConnections(currentLocation);
-        do // repeats just this part of loop if user calls time
-        {
-            isTimeCommand = false;
-            SolicitUser(userInput);
-            bool isValidConnection = IsValidConnection(currentLocation, userInput);
-            if (isValidConnection == true) // move to next room
-            {
-                currentLocation = FindNextCurrentLocation(userInput);
-                roomIndexes[steps] = currentLocation;
-                steps++;
-            }
-            else if (IsTimeCommand(userInput) == true)
-            {
-                pthread_mutex_unlock( &gameMutex ); // let the second thread activate
-                result = pthread_join(timeThread, NULL);
-                    // CreateAndWriteTimeFile(); runs as separate thread now
-                pthread_mutex_lock( &gameMutex );
-                result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL ); // recreate second thread
-
-                char *currTime = (char *) malloc(sizeof(char) * 42);
-                memset(currTime, '\0', sizeof(char) * 42);
-                ReadTimeFile(currTime);
-                printf("\n%s\n", currTime);
-                isTimeCommand = true;
-                free(currTime);
-            }
-            else
-            {
-                RoomNotValid();
-            }
-            isEndRoom = IsEndRoom(currentLocation);
-        } while (isTimeCommand == true);
-    }
-
-    printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
-    char S[] = "S";
-    if (steps == 1)
-    {
-        strcpy(S, "");
-    }
-    printf("YOU TOOK %d STEP%s. YOUR PATH TO VICTORY WAS:\n", steps, S);
-    for (i = 0; i < steps; i++)
-    {
-        printf("%s\n", rooms[roomIndexes[i]].name);
-    }
-
-    free(dirName);
-    for (i = 0; i < 7; i++)
-    {
-        free(roomsArray[i]);
-    }
-    free(roomsArray);
-    free(userInput);
-
-    return 0;
 }
