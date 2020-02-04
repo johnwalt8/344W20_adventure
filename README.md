@@ -5,7 +5,7 @@ Two C programs:
 	johnwalt.buildrooms.c - creates a series of files that hold descriptions of the 
 		in-game rooms, and how the rooms are connected.  
 	johnwalt.adventure.c - provides an interface for playing the game 
-		using the most recetnly gennerated rooms.  
+		using the most recently gennerated rooms.  
 		The player will begin in "starting room" and will win automatically 
 			entering the "ending room", game exits desplaying path (not including starting room)
 		During game, player can enter "time" comment that returns current time
@@ -182,7 +182,7 @@ HINTS:
 	getline()
 	open(), close(), lseek() OR
 	fopen(), fclose(), fseek()
-	strcpy() NOT assgnment operator (=)
+	strcpy() NOT assignment operator (=)
 	Timekeeping:
 		main thread at its beginning locks a mutex: lock()
 		main thread spawns second thread whose first action is to attempt to 

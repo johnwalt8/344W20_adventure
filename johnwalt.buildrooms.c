@@ -11,6 +11,71 @@
 typedef enum { false, true } bool; // from: https://stackoverflow.com/questions/1921539/using-boolean-values-in-c
                                     // because I love booleans
 
+/*--Function Prototypes---------------------------------------------------------------------------*/
+void FillRoomNameArray(char namesArray[10][10]);
+        // Hardcode ten names, seven of which will be randomly assigned to rooms
+void ChooseRoomName(int roomsArray[7]);
+        // takes array of seven ints representing rooms 1 through 7, assigns name to each
+void ChooseRoomType(char typeArray[7][5]);
+        // takes array of seven MID rooms and assigns one room as START and one as END
+int IsGraphFull(int connectionsArray[7][7]);
+        // Returns true if all rooms have 3 to 6 outbound connections, false otherwise
+int GetRandomRoom();
+        // Returns a random Room, does NOT validate if connection can be added
+int CanAddConnectionFrom(int room, int connectionsArray[7][7]);
+        // Returns true if a connection can be added from Room x (< 6 outbound connections), false otherwise
+int ConnectionAlreadyExists(int roomX, int roomY, int connectionsArray[7][7]);
+        // Returns true if a connection from Room x to Room y already exists, false otherwise
+void ConnectRoom(int roomX, int roomY, int connectionsArray[7][7]);
+        // Connects Rooms x and y together, does not check if this connection is valid
+int IsSameRoom(int roomX, int roomY);
+        // Returns true if Rooms x and y are the same Room, false otherwise
+void AddRandomConnection(int connectionsArray[7][7]);
+        // Adds a random, valid outbound connection from a Room to another Room
+void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char typeArray[7][5], int connectionsArray[7][7]);
+        // uses array of rooms, names, types, and connections to create room files
+/*---------------------------------------------------------------------------Function Prototypes--*/
+
+int main()
+{
+    srand(time(NULL)); // initialize seed for rand()
+
+    char roomNameArray[10][10]; // Array of 10 name strings, 7 of which will be randomly chosen
+    memset(roomNameArray, '\0', sizeof(roomNameArray));
+    FillRoomNameArray(roomNameArray);
+
+    int roomArray[7] = { 7, 7, 7, 7, 7, 7, 7 }; // Room names will be randomly assigned to 0 through 6
+                                                // 0 will be start, 6 will be end
+    ChooseRoomName(roomArray);
+
+    int i = -7;
+    char typeArray[7][5]; // array of identifying strings to assign room type
+    for (i = 0; i < 7; i++)
+    {
+        memset(typeArray[i], '\0', sizeof(typeArray[i]));
+    }
+    ChooseRoomType(typeArray);
+
+    int j = -7;
+    int connectionsArray[7][7]; // Array of connections between rooms, each room (0 - 6) will have 7 possible connections (one of which, connection to self, will never be used), assigned randomly
+    for (i = 0; i < 7; i++)
+    {
+        for (j = 0; j < 7; j++)
+        {
+            connectionsArray[i][j] = false; // initially all connections false
+        }
+    }
+
+    while (IsGraphFull(connectionsArray) == false)
+    {
+        AddRandomConnection(connectionsArray);
+    }
+
+    CreateAndPrintRoomFiles(roomNameArray, roomArray, typeArray, connectionsArray);
+
+    return 0;
+}
+
 // Hardcode ten names, seven of which will be randomly assigned to rooms
 void FillRoomNameArray(char namesArray[10][10])
 {
@@ -248,44 +313,4 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char 
     }
 
     close(file_descriptor);
-}
-
-int main()
-{
-    srand(time(NULL)); // initialize seed for rand()
-
-    char roomNameArray[10][10]; // Array of 10 name strings, 7 of which will be randomly chosen
-    memset(roomNameArray, '\0', sizeof(roomNameArray));
-    FillRoomNameArray(roomNameArray);
-
-    int roomArray[7] = { 7, 7, 7, 7, 7, 7, 7 }; // Room names will be randomly assigned to 0 through 6
-                                                // 0 will be start, 6 will be end
-    ChooseRoomName(roomArray);
-
-    int i = -7;
-    char typeArray[7][5]; // array of identifying strings to assign room type
-    for (i = 0; i < 7; i++)
-    {
-        memset(typeArray[i], '\0', sizeof(typeArray[i]));
-    }
-    ChooseRoomType(typeArray);
-
-    int j = -7;
-    int connectionsArray[7][7]; // Array of connections between rooms, each room (0 - 6) will have 7 possible connections (one of which, connection to self, will never be used), assigned randomly
-    for (i = 0; i < 7; i++)
-    {
-        for (j = 0; j < 7; j++)
-        {
-            connectionsArray[i][j] = false; // initially all connections false
-        }
-    }
-
-    while (IsGraphFull(connectionsArray) == false)
-    {
-        AddRandomConnection(connectionsArray);
-    }
-
-    CreateAndPrintRoomFiles(roomNameArray, roomArray, typeArray, connectionsArray);
-
-    return 0;
 }
