@@ -70,7 +70,7 @@ int main()
     int result = pthread_create( &timeThread, NULL,  CreateAndWriteTimeFile, NULL );
 
     int i = -7;
-    int j = -6;
+    // int j = -6;
 
     char *dirName = (char *) malloc(sizeof(char) * 32); // name of directory of room files
     memset(dirName, '\0', sizeof(char) * 32);
@@ -169,7 +169,7 @@ void GetRoomsDirectory(char* dirName)
     struct dirent *fileInDir; 
     struct stat dirAttributes;
 
-    dirToCheck = opendir("."); // current directory
+    dirToCheck = opendir("."); // open current directory
 
     if (dirToCheck > 0)
     {
@@ -329,7 +329,7 @@ void GetAndPrintConnections(int currentLocation)
         }
         else if (strcmp(rooms[currentLocation].connections[i], "NoConn") != 0)
         {
-            printf("%s.\n", rooms[currentLocation].connections[i]); // name of final connection followed by period
+            printf("%s.\n", rooms[currentLocation].connections[i]); // name of final connection followed by period and new line
             break;
         }
     }

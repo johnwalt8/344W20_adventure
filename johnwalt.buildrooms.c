@@ -51,8 +51,7 @@ int main()
     memset(roomNameArray, '\0', sizeof(roomNameArray));
     FillRoomNameArray(roomNameArray);
 
-    int roomArray[7] = { 7, 7, 7, 7, 7, 7, 7 }; // Room names will be randomly assigned to 0 through 6
-                                                // 0 will be start, 6 will be end
+    int roomArray[7]; // Room names will be randomly assigned to 0 through 6
     ChooseRoomName(roomArray);
 
     int i = -7;
@@ -106,8 +105,10 @@ void ChooseRoomName(int roomsArray[7])
 
     for (i = 0; i < 7; i++) // iterate through rooms 0 through 6
     {
+        roomsArray[i] = -9; // initialize element for this logic
+
         int r = -7;
-        while(roomsArray[i] == 7)
+        while(roomsArray[i] == -9)
         {
             bool already = false; // name not already used
             r = rand()%10; // random integer 0 through 9
@@ -131,7 +132,7 @@ void ChooseRoomName(int roomsArray[7])
 void ChooseRoomType(char typeArray[7][5])
 {
     int i = -7;
-    for (i = 0; i < 7; i++)
+    for (i = 0; i < 7; i++) // initialize all rooms as "MID"
     {
         strcpy(typeArray[i], "MID");
     }
@@ -150,19 +151,22 @@ int IsGraphFull(int connectionsArray[7][7])
     bool atLeastThreeEach = true;
     int i = -7;
     int j = -7;
-    int numConnectionsArray[7] = { 0, 0, 0, 0, 0, 0, 0 }; // each room and its number of connections
+
     for (i = 0; i < 7; i++) // check all seven rooms
     {
+        int numConnections = 0; // initialize to zero for each room
         for (j = 0; j < 7; j++) // check each possible connection
         {
             if (connectionsArray[i][j] == true)
             {
-                numConnectionsArray[i] = numConnectionsArray[i] + 1;
+                numConnections++;
             }
         }
-        if (numConnectionsArray[i] < 3) // if any room has less than 3 connections
+
+        if (numConnections < 3) // if less than 3 for any room, graph not full
         {
             atLeastThreeEach = false;
+            break;
         }
     }
     return atLeastThreeEach;
@@ -220,21 +224,15 @@ void AddRandomConnection(int connectionsArray[7][7])
     int roomA = -7;
     int roomB = -7;
 
-    while(true) // get a room that has room for another connection
+    do // get a room that has room for another connection
     {
         roomA = GetRandomRoom();
-
-        if (CanAddConnectionFrom(roomA, connectionsArray) == true)
-        {
-            break;
-        }
-    }
+    } while(CanAddConnectionFrom(roomA, connectionsArray) == false);
 
     do // get a room to connect to, must have room for a connection, can't be the same room, can't already be connected
     {
         roomB = GetRandomRoom();
-    }
-    while(CanAddConnectionFrom(roomB, connectionsArray) == false || IsSameRoom(roomA, roomB) == true || ConnectionAlreadyExists(roomA, roomB, connectionsArray) == true);
+    } while(CanAddConnectionFrom(roomB, connectionsArray) == false || IsSameRoom(roomA, roomB) == true || ConnectionAlreadyExists(roomA, roomB, connectionsArray) == true);
 
     ConnectRoom(roomA, roomB, connectionsArray);
     ConnectRoom(roomB, roomA, connectionsArray); // make the reverse connection while we have needed info
@@ -243,17 +241,17 @@ void AddRandomConnection(int connectionsArray[7][7])
 // uses array of rooms, names, types, and connections to create room files
 void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char typeArray[7][5], int connectionsArray[7][7])
 {
-    char dirName[25]; // name of directory, will include process id number suffix
-    char pidStr[10]; // process id number as a string
-    memset(dirName, '\0', sizeof(dirName));
-    memset(pidStr, '\0', sizeof(pidStr));
+    char roomsDirectoryName[25]; // name of directory, will include process id number suffix
+    char processIdString[10]; // process id number as a string
+    memset(roomsDirectoryName, '\0', sizeof(roomsDirectoryName));
+    memset(processIdString, '\0', sizeof(processIdString));
 
-    strcpy(dirName, "johnwalt.rooms.");
-    int pid = getpid();  // process id number as an integer
-    sprintf(pidStr, "%d", pid); // cast integer as string and assign to string variable
-    strcat(dirName, pidStr); // add process id number to directory name
+    strcpy(roomsDirectoryName, "johnwalt.rooms.");
+    int processId = getpid();  // process id number as an integer
+    sprintf(processIdString, "%d", processId); // cast integer as string and assign to string variable
+    strcat(roomsDirectoryName, processIdString); // add process id number to directory name
 
-    int result = mkdir(dirName, 0755); // create directory with permissions
+    int result = mkdir(roomsDirectoryName, 0755); // create directory with permissions
 
     int file_descriptor;
     size_t nwritten;
@@ -262,25 +260,25 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char 
 
     for (i = 0; i < 7; i++) // iterate through all seven rooms
     {
-        char filePath[36]; // name of room file inside created directory
+        char roomFilePath[36]; // path of room file including created directory
         char lineOfText[24]; // for each line inside each room file
-        memset(filePath, '\0', sizeof(filePath));
+        memset(roomFilePath, '\0', sizeof(roomFilePath));
         memset(lineOfText, '\0', sizeof(lineOfText));
 
-        strcpy(filePath, "./");
-        strcat(filePath, dirName);
-        strcat(filePath, "/");
-        strcat(filePath, roomNameArray[roomArray[i]]); // get the room name
-        strcat(filePath, "_room");
+        strcpy(roomFilePath, "./");
+        strcat(roomFilePath, roomsDirectoryName);
+        strcat(roomFilePath, "/");
+        strcat(roomFilePath, roomNameArray[roomArray[i]]); // get the room name
+        strcat(roomFilePath, "_room");
 
-        file_descriptor = open(filePath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        file_descriptor = open(roomFilePath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 
         if (file_descriptor == -1) // if file is not created
         {
-            printf("open() failed on \"%s\"\n", filePath);
+            printf("open() failed on \"%s\"\n", roomFilePath);
         }
 
-        strcpy(lineOfText, "ROOM_NAME: "); // first line in room file
+        strcpy(lineOfText, "ROOM NAME: "); // first line in room file
         strcat(lineOfText, roomNameArray[roomArray[i]]);
         strcat(lineOfText, "\n");
 
@@ -302,7 +300,7 @@ void CreateAndPrintRoomFiles(char roomNameArray[10][10], int roomArray[7], char 
 
 
         memset(lineOfText, '\0', sizeof(lineOfText)); // empty string variable
-        strcpy(lineOfText, "ROOM_TYPE: ");
+        strcpy(lineOfText, "ROOM TYPE: ");
         if (strcmp(typeArray[i], "SRT") == 0)
         {
             strcat(lineOfText, "START_ROOM\n");
